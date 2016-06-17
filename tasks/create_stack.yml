@@ -8,11 +8,7 @@
     template_parameters:
       VpcId: "{{ vpc_id }}"
       SubnetId: "{{ subnet_id }}"
-      DbSubnets: "{{ db_subnets | join(',') }}"
       KeyPair: "{{ ec2_keypair }}"
-      DbUsername: "{{ db_username }}"
-      DbPassword: "{{ db_password }}"
-      DbAvailabilityZone: "{{ db_availability_zone }}"
       InstanceCount: "{{ instance_count | default(1) }}"
     tags:
       Environment: test
@@ -20,4 +16,3 @@
 
 - debug: msg={{ cf_stack }}
   when: debug is defined
-  
