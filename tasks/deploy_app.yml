@@ -9,7 +9,7 @@
     state: update
     arn: "{{ item }}"
     containers:
-      - name: todobackend
+      - name: app
         image: "{{ image_tag }}"
   with_items:
     - "{{ todobackend_task_def_arn }}"
