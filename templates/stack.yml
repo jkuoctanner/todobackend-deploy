@@ -15,6 +15,19 @@ Parameters:
   InstanceCount:
     Type: "Number"
     Description: "The desired number of application instances"
+  DbSubnets:
+    Type: "List<AWS::EC2::Subnet::Id>"
+    Description: "The target DB Subnet Group subnet Ids"
+  DbAvailabilityZone:
+    Type: "String"
+    Description: "The target availability zone for the database instance"
+  DbUsername:
+    Type: "String"
+    Description: "The RDS database username"
+  DbPassword:
+    Type: "String"
+    Description: "The RDS database password"
+    NoEcho: "true"
 
 # Stack Resources
 Resources:
@@ -83,6 +96,43 @@ Resources:
       Path: "/"
       ManagedPolicyArns: 
         - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"     
+  DbInstance:
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBSubnetGroupName: { "Ref": "DbSubnetGroup" }
+      MultiAZ: "false"
+      AvailabilityZone: { "Ref": "DbAvailabilityZone" }
+      AllocatedStorage: 8
+      StorageType: "gp2"
+      DBInstanceClass: "db.t2.micro"
+      DBName: "todos"
+      Engine: "postgres"
+      EngineVersion: "9.5.2"
+      MasterUsername: { "Ref": "DbUsername" }
+      MasterUserPassword: { "Ref": "DbPassword" }
+      VPCSecurityGroups:
+        - { "Ref": "DbSecurityGroup" }
+      Tags:
+        - Key: "Name"
+          Value: { "Fn::Join": ["", [ { "Ref": "AWS::StackName" }, "-db" ] ] }
+  DbSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties: 
+      GroupDescription: "Todobackend DB Security Group"
+      VpcId: { "Ref": "VpcId"}
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "5432"
+          ToPort: "5432"
+          SourceSecurityGroupId: { "Ref": "EC2InstanceSecurityGroup" }        
+  DbSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: "Todobackend DB Subnet Group"
+      SubnetIds: { "Ref": "DbSubnets" }
+      Tags: 
+        - Key: "Name"
+          Value: { "Fn::Join": ["", [ { "Ref": "AWS::StackName" }, "-db-subnet-group" ] ] }
   ElasticLoadBalancer:
     Type: "AWS::ElasticLoadBalancing::LoadBalancer"
     Properties:
@@ -124,8 +174,6 @@ Resources:
         - Name: app
           Image: jkuoctanner/todobackend-play
           Memory: 500
-          Links:
-            - "db:db"
           PortMappings:
             - ContainerPort: "9000"
               HostPort: "9000"
@@ -133,24 +181,11 @@ Resources:
             - Name: APPLICATION_SECRET
               Value: WKNd<w6cujIMRr;/vFNJY0grfI6w2tUX7rZj>0L6t9kF4vl1^xX;QZkbAZH]T^D9
             - Name: POSTGRES_HOST
-              Value: db
+              Value: { "Fn::GetAtt": ["DbInstance", "Endpoint.Address"] }
             - Name: POSTGRES_USER
-              Value: todos
+              Value: { "Ref": "DbUsername" }
             - Name: POSTGRES_PASSWORD
-              Value: password
-            - Name: POSTGRES_DB
-              Value: todos
-        - Name: db
-          Image: postgres:latest
-          Memory: 300
-          PortMappings:
-            - ContainerPort: "5432"
-              HostPort: "5432"
-          Environment:
-            - Name: POSTGRES_USER
-              Value: todos
-            - Name: POSTGRES_PASSWORD
-              Value: password
+              Value: { "Ref": "DbPassword" }
             - Name: POSTGRES_DB
               Value: todos
   TodobackendService:

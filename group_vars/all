@@ -7,4 +7,5 @@ db_subnets:
   - subnet-1f90e046
   - subnet-50300335
 db_availability_zone: us-west-1b
-db_username: todobackend
+db_username: todos
+db_password: password
